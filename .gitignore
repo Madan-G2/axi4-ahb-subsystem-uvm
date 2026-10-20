@@ -1,0 +1,12 @@
+sim/
+*.vcd
+*.wdb
+__pycache__/
+*.pyc
+
+# Vivado tools leave these in whatever directory they were started from
+/x*.log
+/x*.pb
+*.jou
+xsim.dir/
+.Xil/
