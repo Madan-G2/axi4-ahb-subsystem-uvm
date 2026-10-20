@@ -16,7 +16,7 @@
 This document is the **plan**, written before any code. What was actually built, and where it
 departs from the plan, is below; the sections after it are left as originally written so the
 two can be compared. Current numbers live in [coverage_plan.md](coverage_plan.md) and
-[bug_log.md](bug_log.md); [../README.md](../README.md) has the status table.
+[bug_log.md](bug_log.md); [../README.md](../README.md) says what is here and what is missing.
 
 **Built (phases 0-3, plus most of 6):** crossbar, SRAM and CSR slaves with exclusive access,
 default slave, AXI→AHB bridge, AHB subsystem, UVM environment with a C++ reference model through
