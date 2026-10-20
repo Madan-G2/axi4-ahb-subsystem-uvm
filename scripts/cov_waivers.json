@@ -1,0 +1,108 @@
+{
+  "_about": "Coverage waivers for scripts/check_cov_closure.py. Every entry says what it excuses, why, and on what PREMISE; premises other than 'asserted' are re-checked against the coverage data every time the gate runs, and an entry whose premise fails is rejected. See docs/coverage_plan.md.",
+  "goals": {
+    "functional": 100.0,
+    "statement": 100.0,
+    "branch": 100.0,
+    "events": 100.0,
+    "condition": null
+  },
+  "functional": [
+    {
+      "id": "F-OUTSTANDING-AR-D8",
+      "group": "axi4_cov\\.cg_outstanding",
+      "point": "cp_ar",
+      "bin": "d8",
+      "premise": "asserted",
+      "reason": "The bin is 'an AR accepted while eight are already outstanding'. A master port is limited to eight outstanding by the crossbar (the ninth is held back, never accepted), and the SRAM and CSR slaves have an eight-entry AR queue that deasserts ARREADY when full, so a ninth is never accepted at any port. The write-side bin (cp_aw d8) is reachable only because the observer counts writes until BRESP while the slave's queue frees at WLAST. Eight outstanding reads ARE reached (bin d5_7, and the queue-full test drives the SRAM AR queue to its limit)."
+    },
+    {
+      "id": "F-ORDER-WR-DEEP",
+      "group": "axi4_cov\\.cg_order",
+      "point": "cp_wr",
+      "bin": "ooo_2|ooo_3p",
+      "premise": "asserted",
+      "reason": "A write response can overtake at most ONE older write by construction: AW and W are ordered per master, and the AHB bridge accepts one transaction at a time, so at most one slow write is in flight. Overtaking two or more older writes needs two older writes that are both still outstanding when a younger one's response is delivered, which the SRAM/CSR/default slaves (equally fast) and the single serialised AHB path produce only through a timing coincidence: depth 2 was seen ONCE in round r2 and in none of the 180+ runs since. Depth 1 is hit thousands of times, and depth 2 / 3+ exercise no mechanism depth 1 does not (the tracker's position in a queue). Read-side depth 3+ is covered."
+    }
+  ],
+  "code": [
+    {
+      "id": "C-AHBMEM-PARAM",
+      "module": "ahb_slave_mem",
+      "kind": "branch",
+      "premise": "other-variant",
+      "reason": "ahb_slave_mem is instantiated three ways (boot ROM READ_ONLY, peripheral registers, WAITGEN wait/error slave) and XSim reports each parameterisation separately. A branch on a parameter (READ_ONLY, WAITGEN) or on state only a WAITGEN/READ_ONLY slave can reach takes one side per variant. Checked per item: some other variant has no gap on the same source line."
+    },
+    {
+      "id": "C-AHBMEM-IDX-GUARD",
+      "module": "ahb_slave_mem",
+      "kind": "branch",
+      "text": "idx\\(\\{d_addr",
+      "premise": "asserted",
+      "reason": "Defensive bounds guard on the byte index of a read. idx() already reduces the address modulo SIZE and the AHB decoder only selects this slave for addresses inside its window, so the false side (an address outside the slave) cannot occur."
+    },
+    {
+      "id": "C-DEFAULT-ARM",
+      "text": "default\\s*:",
+      "premise": "asserted",
+      "reason": "The default arm of a fully enumerated state machine (state register already holds one of the encoded values). Reachable only by corrupting the state register, which simulation cannot do without forcing it. It exists so synthesis resolves to a safe state."
+    },
+    {
+      "id": "C-ASSERT-ACTION",
+      "text": "else\\s+\\$error",
+      "premise": "asserted",
+      "reason": "The failure action of an immediate or concurrent assertion. It executes only when the assertion fails, which in a design that passes means never. That the assertions CAN fire is shown separately: the arbiter's by REPLAY_A1 (docs/bug_replays.md), the AXI checker's by the negative tests and tb_checker_neg."
+    },
+    {
+      "id": "C-WROUTER-OVERFLOW",
+      "module": "axi4_w_router",
+      "text": "q_overflow",
+      "premise": "asserted",
+      "reason": "Overflow detector for the ordering queues. The queues are sized to the crossbar's per-master outstanding limit and are only pushed under that limit, so a push into a full queue is impossible unless the limit logic is broken (and is the thing the detector exists to catch)."
+    },
+    {
+      "id": "C-SRAM-PRELOAD",
+      "module": "axi4_sram_ctrl",
+      "text": "INIT_FILE",
+      "premise": "asserted",
+      "reason": "Optional memory preload ($readmemh) through the INIT_FILE parameter. No instance sets it; the simulation memories start undefined on purpose, so that the scoreboard's X check means something."
+    },
+    {
+      "id": "C-SRAM-RANGE",
+      "module": "axi4_sram_ctrl",
+      "text": "in_range\\(cur\\.addr\\)",
+      "premise": "asserted",
+      "reason": "SLVERR for a write outside the slave's own window. Behind the crossbar an address outside the window decodes to the default slave and is answered DECERR, so the slave never sees one. (It was reachable, and tested, when the slave ran standalone in Phase 1.)"
+    },
+    {
+      "id": "C-PKG-REDUNDANT-128",
+      "module": "^axi4_pkg",
+      "kind": "branch",
+      "text": "total > 128",
+      "premise": "asserted",
+      "reason": "axi_exclusive_legal() tests len > 15 first, and with a 64-bit bus (size <= 3) at most 16 beats of 8 bytes is 128 bytes, so 'total > 128' cannot be true. It is kept for wider buses; on this one it is redundant, and no stimulus can reach it."
+    },
+    {
+      "id": "C-PKG-ILLEGAL-ARMS",
+      "module": "^axi4_pkg",
+      "kind": "branch",
+      "premise": "negative-tests",
+      "reason": "The 'return illegal' arms of the legality predicates in axi4_pkg (axi_req_legal, axi_exclusive_legal, axi_wrap_legal, ...). They run only for illegal requests, which the sign-off regression never sends; the negative tests do, deliberately. Checked per item against a coverage run of the negative tests alone."
+    },
+    {
+      "id": "C-BRIDGE-ERRWAIT",
+      "module": "axi2ahb_bridge",
+      "detail": "implicit else",
+      "premise": "asserted",
+      "reason": "ST_ERRWAIT waits for HREADY in the second cycle of an AHB ERROR response. That cycle always has HREADY high (the two-cycle ERROR response is fixed by the AHB spec and implemented that way by every slave here), so the 'HREADY low' side cannot occur."
+    },
+    {
+      "id": "C-HAZARD-UNDERFLOW",
+      "module": "axi4_id_hazard",
+      "text": "cnt\\[retire_id\\]",
+      "premise": "asserted",
+      "reason": "Underflow guard on the per-ID outstanding counter: a response arriving for an ID with nothing outstanding. The scoreboard and the checker both fail the test if a slave ever does that; the guard only keeps the counter sane afterwards."
+    }
+  ],
+  "events": []
+}
