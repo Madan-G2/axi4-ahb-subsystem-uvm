@@ -9,7 +9,7 @@ M2 --+                          +-- S2  CSR block, 4 KB
                                 +-- S3  default slave
 ```
 
-Verification is UVM 1.2 with a C++ reference model called over DPI-C, SVA checkers, and functional plus code coverage. All of it has been run on Vivado XSim 2024.1 on Windows, and nowhere else. There is no VCS run and no formal work in here, although the original plan had both. The last section lists what's missing.
+Verification is UVM 1.2 with a C++ reference model called over DPI-C, SVA checkers, and functional plus code coverage. All of it has been run on Vivado XSim 2024.1 on Windows, and nowhere else. There is no VCS run and no formal work in here, although the original plan had both.
 
 ## Design
 
@@ -115,18 +115,6 @@ The closure script (`scripts/check_cov_closure.py`) reports functional, statemen
 Toggle and condition aren't gated. XSim's toggle report is per module, so a bit that can never toggle can't be named and waived, and its condition numbers disagree with the waveform in places.
 
 There are also 120 `cover property` statements, generated from one list in `scripts/gen_cover.py`. They parse and elaborate in XSim, but XSim never simulates them, so the same 120 events are counted with procedural code as well and the reports use those counts. A simulator that counts covers could use the SVA versions directly; that hasn't been tried.
-
-## What's missing
-
-VCS. `scripts/Makefile` has a VCS flow that has never been run.
-
-Formal. The plan included VC Formal runs on the bridge and the arbiter. None were done, and there is no `formal/` directory.
-
-An AHB protocol checker. Only the AXI side has one.
-
-A CPU. The plan had a PicoRV32 as M0.
-
-Anything beyond a single clock. There is no CDC.
 
 ## Layout
 
